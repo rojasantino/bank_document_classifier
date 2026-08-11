@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  bank-doc-classifier:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount trained checkpoints and data from host so you don't have to
+      # rebuild the image every time you retrain a model.
+      - ./outputs:/app/outputs
+      - ./data:/app/data
+    environment:
+      - FORCE_CPU=1        # remove this line if the host has a CUDA GPU + nvidia-docker
+      - DEFAULT_MODEL=custom_cnn

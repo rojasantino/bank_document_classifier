@@ -1,0 +1,11 @@
+torch>=2.2
+torchvision>=0.17
+opencv-python-headless>=4.9
+pillow>=10.0
+numpy>=1.26
+scikit-learn>=1.4
+matplotlib>=3.8
+pytesseract>=0.3.10
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9

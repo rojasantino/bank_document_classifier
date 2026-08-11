@@ -1,0 +1,42 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+./
+READMEcopy.md
+# Data (keep folder structure, ignore contents)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Trained models / logs / reports / gradcam outputs (can be large, regenerate via run_pipeline.sh)
+outputs/models/*
+outputs/logs/*
+outputs/reports/*
+outputs/gradcam/*
+!outputs/models/.gitkeep
+!outputs/logs/.gitkeep
+!outputs/reports/.gitkeep
+!outputs/gradcam/.gitkeep
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Docker
+*.pid
