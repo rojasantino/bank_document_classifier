@@ -10,8 +10,8 @@ env/
 ENV/
 ./
 READMEcopy.md
-.agents
-.claude
+.agents/
+.claude/
 # Data (keep folder structure, ignore contents)
 data/raw/*
 data/processed/*
