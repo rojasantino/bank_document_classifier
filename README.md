@@ -81,9 +81,8 @@ bank_document_classifier/
 
 ---
 
-## 4. Prerequisites / தேவைகள்
+## 4. Prerequisites
 
-**English:**
 - Python 3.10+
 - pip
 - Tesseract OCR engine installed on your system (for the OCR module)
@@ -229,21 +228,3 @@ docker compose up --build
 ```
 The API will be available at http://localhost:8000. The `docker-compose.yml` mounts your local `outputs/` and `data/` folders into the container, so you don't need to retrain inside Docker — just train locally first, then launch the container to serve it.
 
----
-
-## 7. Extending This Project
-
-
-- Replace synthetic data with a real dataset of scanned bank documents for meaningful accuracy.
-- Increase `NUM_EPOCHS` in `config.py` once you have a real dataset (8 epochs on synthetic data is only a smoke test).
-- Add more OCR ROI templates in `src/ocr_extraction.py` for different bank cheque layouts.
-- Extend `match_courtesy_and_legal_amount()` with a proper words-to-number parser for full legal-vs-courtesy amount verification.
-- Add SIFT + SVM signature verification (as shown in the reference architecture diagrams you shared) as a further authentication layer.
-- Log experiments with MLflow for the model-comparison table (`pip install mlflow`).
-
-
----
-
-## 8. Notes on the Included Synthetic Dataset 
-
-The `data/generate_synthetic_data.py` script exists **only** to let you run and validate the full pipeline (training → evaluation → Grad-CAM → API → OCR) immediately, without waiting to collect a real dataset. Accuracy on synthetic data is **not representative** of real-world performance — swap in real scanned documents under `data/raw/<class_name>/` as soon as you have them, then rerun `run_pipeline.sh`.

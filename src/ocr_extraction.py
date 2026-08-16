@@ -28,6 +28,18 @@ import argparse
 import cv2
 import pytesseract
 
+# Auto-detect Tesseract executable on Windows if not already on PATH
+if os.name == "nt":
+    common_tesseract_paths = [
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        os.path.expanduser(r"~\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"),
+    ]
+    for p in common_tesseract_paths:
+        if os.path.exists(p):
+            pytesseract.pytesseract.tesseract_cmd = p
+            break
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import config  # noqa: E402
 from src.data_preprocessing import read_image, denoise, deskew, auto_crop  # noqa: E402
@@ -51,10 +63,14 @@ def crop_roi(img, roi):
 
 
 def ocr_text(img_crop, config_str="--psm 7"):
-    gray = cv2.cvtColor(img_crop, cv2.COLOR_BGR2GRAY)
-    gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
-    text = pytesseract.image_to_string(gray, config=config_str)
-    return text.strip()
+    try:
+        gray = cv2.cvtColor(img_crop, cv2.COLOR_BGR2GRAY)
+        gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+        text = pytesseract.image_to_string(gray, config=config_str)
+        return text.strip()
+    except Exception as e:
+        print(f"[OCR Warning] {e}")
+        return ""
 
 
 def extract_cheque_fields(image_path_or_array):

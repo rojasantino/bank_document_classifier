@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Document Classifier & Information Extraction AI</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        display: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        bank: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                        },
+                        navy: {
+                            800: '#0f172a',
+                            850: '#0b1120',
+                            900: '#070c18',
+                            950: '#030712',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #030712;
+            color: #f3f4f6;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(59, 130, 246, 0.08) 0px, transparent 50%),
+                radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card-hover {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card-hover:hover {
+            border-color: rgba(34, 197, 94, 0.35);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px -10px rgba(34, 197, 94, 0.15);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(34, 197, 94, 0.5);
+        }
+        .badge-glow {
+            box-shadow: 0 0 15px rgba(34, 197, 94, 0.35);
+        }
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; }
+            50% { opacity: 0.3; }
+        }
+        .animate-pulse-glow {
+            animation: pulse-glow 2.5s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+
+    <!-- Top Navbar -->
+    <header class="sticky top-0 z-50 glass-card border-b border-white/10 px-6 py-3.5">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                    <i data-lucide="landmark" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2.5">
+                        <span class="font-display font-bold text-lg tracking-tight text-white">BankVision AI</span>
+                        <span class="px-2 py-0.5 text-xs font-mono font-medium rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">v1.0.0</span>
+                    </div>
+                    <p class="text-xs text-gray-400">Document Classifier, Grad-CAM & OCR Extraction</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="hidden md:flex items-center gap-1.5 p-1 bg-white/5 rounded-xl border border-white/5">
+                <button onclick="switchTab('classifier')" id="tab-btn-classifier" class="nav-tab px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-emerald-600 text-white shadow">
+                    <i data-lucide="scan-line" class="w-4 h-4"></i> Live Classifier
+                </button>
+                <button onclick="switchTab('benchmarks')" id="tab-btn-benchmarks" class="nav-tab px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-white hover:bg-white/5">
+                    <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Benchmarks & Confusion Matrix
+                </button>
+                <button onclick="switchTab('pipeline')" id="tab-btn-pipeline" class="nav-tab px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-white hover:bg-white/5">
+                    <i data-lucide="workflow" class="w-4 h-4"></i> README & Pipeline Steps
+                </button>
+            </nav>
+
+            <!-- Status Badges -->
+            <div class="flex items-center gap-3">
+                <div class="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span class="font-mono" id="api-status-text">FastAPI Online</span>
+                </div>
+                <a href="/docs" target="_blank" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-300 border border-white/10 flex items-center gap-1.5 transition">
+                    <i data-lucide="book-open" class="w-3.5 h-3.5"></i> Swagger API
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
+
+        <!-- =================================================================== -->
+        <!-- TAB 1: LIVE CLASSIFIER & LABEL CHECKER                              -->
+        <!-- =================================================================== -->
+        <section id="tab-classifier" class="space-y-6">
+            
+            <!-- Hero Stats Row -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="glass-card p-4 rounded-2xl">
+                    <div class="flex items-center justify-between text-gray-400 text-xs mb-1">
+                        <span>Trained Backbones</span>
+                        <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+                    </div>
+                    <div class="text-xl font-display font-bold text-white">4 Architectures</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Custom CNN, MobileNet, ResNet, EfficientNet</div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl">
+                    <div class="flex items-center justify-between text-gray-400 text-xs mb-1">
+                        <span>Document Classes</span>
+                        <i data-lucide="folder-check" class="w-4 h-4 text-teal-400"></i>
+                    </div>
+                    <div class="text-xl font-display font-bold text-white">8 Categories</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Cheques, Statements, KYC, Forms, etc.</div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl">
+                    <div class="flex items-center justify-between text-gray-400 text-xs mb-1">
+                        <span>Peak Test Accuracy</span>
+                        <i data-lucide="award" class="w-4 h-4 text-amber-400"></i>
+                    </div>
+                    <div class="text-xl font-display font-bold text-emerald-400">100.0%</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">ResNet50 & MobileNetV2</div>
+                </div>
+                <div class="glass-card p-4 rounded-2xl">
+                    <div class="flex items-center justify-between text-gray-400 text-xs mb-1">
+                        <span>Explainability & OCR</span>
+                        <i data-lucide="sparkles" class="w-4 h-4 text-purple-400"></i>
+                    </div>
+                    <div class="text-xl font-display font-bold text-purple-400">Grad-CAM + OCR</div>
+                    <div class="text-[11px] text-gray-400 mt-0.5">Heatmaps & Structured Cheque Parsing</div>
+                </div>
+            </div>
+
+            <!-- Two Column Layout: Left Input / Right Results -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                <!-- LEFT COLUMN: Settings & Input (5 cols) -->
+                <div class="lg:col-span-5 space-y-5">
+                    
+                    <!-- Model & Mode Selection Card -->
+                    <div class="glass-card p-5 rounded-2xl space-y-4">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                                <i data-lucide="cpu" class="w-4 h-4 text-emerald-400"></i> Select Neural Model
+                            </label>
+                            <span id="active-model-badge" class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-300 border border-emerald-500/20">
+                                ResNet50 (Recommended)
+                            </span>
+                        </div>
+
+                        <!-- Model Grid Buttons -->
+                        <div class="grid grid-cols-2 gap-2" id="model-selector-grid">
+                            <button onclick="selectModel('resnet50')" data-model="resnet50" class="model-card p-3 rounded-xl border border-emerald-500 bg-emerald-950/30 text-left transition relative">
+                                <div class="font-semibold text-xs text-white flex items-center justify-between">
+                                    <span>ResNet50</span>
+                                    <span class="text-[10px] text-emerald-400 font-mono">100% Acc</span>
+                                </div>
+                                <div class="text-[11px] text-gray-400 mt-1">Deep Residual Net • 23.5M params</div>
+                            </button>
+                            <button onclick="selectModel('mobilenet_v2')" data-model="mobilenet_v2" class="model-card p-3 rounded-xl border border-white/10 bg-white/5 text-left transition hover:border-white/20">
+                                <div class="font-semibold text-xs text-white flex items-center justify-between">
+                                    <span>MobileNetV2</span>
+                                    <span class="text-[10px] text-teal-400 font-mono">50ms • 100%</span>
+                                </div>
+                                <div class="text-[11px] text-gray-400 mt-1">Ultra-Fast Mobile Backbone • 2.2M</div>
+                            </button>
+                            <button onclick="selectModel('efficientnet_b0')" data-model="efficientnet_b0" class="model-card p-3 rounded-xl border border-white/10 bg-white/5 text-left transition hover:border-white/20">
+                                <div class="font-semibold text-xs text-white flex items-center justify-between">
+                                    <span>EfficientNet-B0</span>
+                                    <span class="text-[10px] text-blue-400 font-mono">98.6% Acc</span>
+                                </div>
+                                <div class="text-[11px] text-gray-400 mt-1">Compound Scaled • 4.0M params</div>
+                            </button>
+                            <button onclick="selectModel('custom_cnn')" data-model="custom_cnn" class="model-card p-3 rounded-xl border border-white/10 bg-white/5 text-left transition hover:border-white/20">
+                                <div class="font-semibold text-xs text-white flex items-center justify-between">
+                                    <span>Custom CNN</span>
+                                    <span class="text-[10px] text-purple-400 font-mono">45ms • 98.6%</span>
+                                </div>
+                                <div class="text-[11px] text-gray-400 mt-1">Scratch 4-Layer Baseline • 1.4M</div>
+                            </button>
+                        </div>
+
+                        <!-- Inference Mode Selector -->
+                        <div class="pt-2 border-t border-white/5">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-2">
+                                Inference Action Mode
+                            </label>
+                            <div class="grid grid-cols-3 gap-1.5 p-1 bg-black/40 rounded-xl border border-white/10 text-xs">
+                                <button onclick="setInteractionMode('predict')" id="mode-btn-predict" class="mode-tab py-2 rounded-lg font-medium transition bg-emerald-600 text-white flex flex-col items-center gap-1">
+                                    <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                                    <span>Classify</span>
+                                </button>
+                                <button onclick="setInteractionMode('gradcam')" id="mode-btn-gradcam" class="mode-tab py-2 rounded-lg font-medium transition text-gray-400 hover:text-white flex flex-col items-center gap-1">
+                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                    <span>Grad-CAM</span>
+                                </button>
+                                <button onclick="setInteractionMode('ocr')" id="mode-btn-ocr" class="mode-tab py-2 rounded-lg font-medium transition text-gray-400 hover:text-white flex flex-col items-center gap-1">
+                                    <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                                    <span>OCR Fields</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload & Document Source Card -->
+                    <div class="glass-card p-5 rounded-2xl space-y-4">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                                <i data-lucide="upload-cloud" class="w-4 h-4 text-emerald-400"></i> Document Input
+                            </label>
+                            <span id="file-size-badge" class="text-[11px] font-mono text-gray-400">No file selected</span>
+                        </div>
+
+                        <!-- Drag and Drop Box -->
+                        <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="relative border-2 border-dashed border-white/15 hover:border-emerald-500/50 rounded-2xl p-6 text-center cursor-pointer transition bg-white/[0.02] hover:bg-emerald-500/[0.03] group">
+                            <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+                            
+                            <div id="upload-prompt" class="space-y-2">
+                                <div class="w-12 h-12 rounded-full bg-white/5 group-hover:bg-emerald-500/20 text-gray-400 group-hover:text-emerald-400 mx-auto flex items-center justify-center transition">
+                                    <i data-lucide="image-plus" class="w-6 h-6"></i>
+                                </div>
+                                <div class="text-xs font-medium text-gray-300">
+                                    <span class="text-emerald-400 underline">Click to upload</span> or drag and drop
+                                </div>
+                                <p class="text-[11px] text-gray-400">PNG, JPG, JPEG (Max 10MB)</p>
+                            </div>
+
+                            <!-- Selected Image Preview Inside Dropzone -->
+                            <div id="preview-container" class="hidden space-y-3">
+                                <div class="relative max-h-48 rounded-xl overflow-hidden bg-black/50 border border-white/10 flex items-center justify-center">
+                                    <img id="image-preview" src="" alt="Document Preview" class="max-h-48 w-auto object-contain rounded-lg">
+                                </div>
+                                <div class="flex items-center justify-between text-xs text-gray-400">
+                                    <span id="preview-filename" class="font-mono truncate max-w-[200px]">sample.png</span>
+                                    <span class="text-emerald-400 hover:underline">Change File</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- One-Click Sample Document Picker -->
+                        <div class="space-y-2 pt-2 border-t border-white/5">
+                            <div class="flex items-center justify-between text-xs text-gray-400">
+                                <span class="font-medium flex items-center gap-1">
+                                    <i data-lucide="library" class="w-3.5 h-3.5 text-teal-400"></i> Or Test with 8 Sample Classes:
+                                </span>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-xs">
+                                <button onclick="loadSampleDoc('cheque', 'cheque_0000.png')" class="sample-btn px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-300 border border-white/5 text-[11px] text-left transition truncate">
+                                    🏦 Cheque
+                                </button>
+                                <button onclick="loadSampleDoc('bank_statement', 'bank_statement_0000.png')" class="sample-btn px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-300 border border-white/5 text-[11px] text-left transition truncate">
+                                    📄 Statement
+                                </button>
+                                <button onclick="loadSampleDoc('card_document', 'card_document_0000.png')" class="sample-btn px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-300 border border-white/5 text-[11px] text-left transition truncate">
+                                    💳 Card Doc
+                                </button>
+                                <button onclick="loadSampleDoc('deposit_slip', 'deposit_slip_0000.png')" class="sample-btn px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-300 border border-white/5 text-[11px] text-left transition truncate">
+                                    📥 Deposit Slip
+                                </button>
+                                <button onclick="loadSampleDoc('withdrawal_slip', 'withdrawal_slip_0000.png')" class="sample-btn px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-300 border border-white/5 text-[11px] text-left transition truncate">
+                                    📤 Withdrawal
+                                </button>
+                                <button onclick="loadSampleDoc('account_opening_form', 'account_opening_form_0000.png')" class="sample-btn px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-300 border border-white/5 text-[11px] text-left transition truncate">
+                                    📝 Account Form
+                                </button>
+                                <button onclick="loadSampleDoc('kyc_document', 'kyc_document_0000.png')" class="sample-btn px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-300 border border-white/5 text-[11px] text-left transition truncate">
+                                    🆔 KYC Doc
+                                </button>
+                                <button onclick="loadSampleDoc('other_financial_document', 'other_financial_document_0000.png')" class="sample-btn px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-emerald-500/20 hover:text-emerald-300 border border-white/5 text-[11px] text-left transition truncate">
+                                    📊 Other Financial
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Action Button -->
+                        <button id="run-inference-btn" onclick="executeInference()" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-semibold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
+                            <i data-lucide="play" class="w-4 h-4 fill-white"></i>
+                            <span id="btn-text">Run Document Classification</span>
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- RIGHT COLUMN: Results & Explainability (7 cols) -->
+                <div class="lg:col-span-7 space-y-5">
+                    
+                    <!-- Main Prediction Result Banner -->
+                    <div id="result-card" class="glass-card p-6 rounded-2xl space-y-5 border-emerald-500/30">
+                        
+                        <!-- Header Result -->
+                        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-white/10">
+                            <div>
+                                <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Predicted Document Label</span>
+                                <div class="flex items-center gap-3 mt-1">
+                                    <h2 id="result-label" class="text-2xl font-display font-extrabold text-white tracking-tight capitalize">
+                                        Ready for Document
+                                    </h2>
+                                    <span id="result-badge" class="px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                                        Waiting for run
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="text-right">
+                                <span class="text-xs uppercase tracking-wider text-gray-400 font-semibold">Confidence Score</span>
+                                <div id="result-confidence" class="text-2xl font-mono font-bold text-emerald-400 mt-1">
+                                    0.0%
+                                </div>
+                                <span id="inference-time" class="text-[11px] font-mono text-gray-400">Latency: -- ms</span>
+                            </div>
+                        </div>
+
+                        <!-- Results View Mode Tabs (Probabilities / Grad-CAM / OCR Fields / JSON) -->
+                        <div class="space-y-4">
+                            
+                            <!-- Sub Tabs -->
+                            <div class="flex items-center gap-2 border-b border-white/10 pb-2 text-xs font-semibold">
+                                <button onclick="setResultsSubTab('probs')" id="subtab-btn-probs" class="subtab-btn text-emerald-400 border-b-2 border-emerald-400 pb-1 flex items-center gap-1.5">
+                                    <i data-lucide="bar-chart-2" class="w-3.5 h-3.5"></i> Probabilities Breakdown
+                                </button>
+                                <button onclick="setResultsSubTab('gradcam')" id="subtab-btn-gradcam" class="subtab-btn text-gray-400 hover:text-white pb-1 flex items-center gap-1.5">
+                                    <i data-lucide="flame" class="w-3.5 h-3.5"></i> Grad-CAM Heatmap
+                                </button>
+                                <button onclick="setResultsSubTab('ocr')" id="subtab-btn-ocr" class="subtab-btn text-gray-400 hover:text-white pb-1 flex items-center gap-1.5">
+                                    <i data-lucide="binary" class="w-3.5 h-3.5"></i> OCR Extracted Fields
+                                </button>
+                                <button onclick="setResultsSubTab('json')" id="subtab-btn-json" class="subtab-btn text-gray-400 hover:text-white pb-1 flex items-center gap-1.5">
+                                    <i data-lucide="code" class="w-3.5 h-3.5"></i> Raw JSON
+                                </button>
+                            </div>
+
+                            <!-- 1. All Probabilities Progress List -->
+                            <div id="subtab-view-probs" class="space-y-2.5">
+                                <div class="text-xs text-gray-400 mb-2">Confidence distribution across all 8 supported banking document types:</div>
+                                <div id="probabilities-container" class="space-y-2">
+                                    <!-- Sample rows inserted dynamically -->
+                                    <div class="text-xs text-gray-500 italic py-4 text-center">Upload an image and run inference to view probabilities.</div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Grad-CAM Visual Heatmap Panel -->
+                            <div id="subtab-view-gradcam" class="hidden space-y-4">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-300">Model Attention Heatmap (Grad-CAM):</span>
+                                    <span class="text-[11px] text-emerald-400">Warmer colors (Red/Yellow) = Higher Attention</span>
+                                </div>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="space-y-1.5">
+                                        <div class="text-[11px] font-mono text-gray-400 uppercase">Original Preprocessed Document</div>
+                                        <div class="h-60 rounded-xl overflow-hidden bg-black/60 border border-white/10 flex items-center justify-center p-2">
+                                            <img id="gradcam-orig-img" src="" class="max-h-full w-auto object-contain rounded-lg">
+                                        </div>
+                                    </div>
+                                    <div class="space-y-1.5">
+                                        <div class="text-[11px] font-mono text-emerald-400 uppercase">Attention Overlay (Explainability)</div>
+                                        <div class="h-60 rounded-xl overflow-hidden bg-black/60 border border-emerald-500/30 flex items-center justify-center p-2 relative">
+                                            <img id="gradcam-heat-img" src="" class="max-h-full w-auto object-contain rounded-lg">
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-400 bg-white/5 p-3 rounded-xl border border-white/5">
+                                    💡 <strong>Explainability Insight:</strong> Grad-CAM computes gradients with respect to the last convolutional layer. For cheques, it highlights signature areas, bank stamps, and the MICR code band at the bottom.
+                                </p>
+                            </div>
+
+                            <!-- 3. OCR Field Extraction Panel -->
+                            <div id="subtab-view-ocr" class="hidden space-y-4">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-300 font-medium">Extracted Structured Fields (Phase 2):</span>
+                                    <span id="ocr-status-pill" class="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/30">
+                                        Cheque Template Match
+                                    </span>
+                                </div>
+                                
+                                <div id="ocr-fields-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                                    <div class="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                                        <div class="text-gray-400 text-[11px] uppercase font-mono">Date</div>
+                                        <div id="ocr-val-date" class="font-semibold text-white font-mono text-sm">--</div>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                                        <div class="text-gray-400 text-[11px] uppercase font-mono">Payee Name</div>
+                                        <div id="ocr-val-payee" class="font-semibold text-white text-sm">--</div>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                                        <div class="text-gray-400 text-[11px] uppercase font-mono">Amount (Numeric / Courtesy)</div>
+                                        <div id="ocr-val-amount" class="font-semibold text-emerald-400 font-mono text-sm">--</div>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                                        <div class="text-gray-400 text-[11px] uppercase font-mono">Account Number</div>
+                                        <div id="ocr-val-account" class="font-semibold text-teal-300 font-mono text-sm">--</div>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                                        <div class="text-gray-400 text-[11px] uppercase font-mono">IFSC Code</div>
+                                        <div id="ocr-val-ifsc" class="font-semibold text-indigo-300 font-mono text-sm">--</div>
+                                    </div>
+                                    <div class="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
+                                        <div class="text-gray-400 text-[11px] uppercase font-mono">Signature Region</div>
+                                        <div id="ocr-val-sig" class="font-semibold text-purple-300 text-sm">--</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 4. Raw JSON Response Panel -->
+                            <div id="subtab-view-json" class="hidden space-y-2">
+                                <div class="flex items-center justify-between text-xs text-gray-400">
+                                    <span>API Response JSON payload</span>
+                                    <button onclick="copyRawJson()" class="hover:text-emerald-400 transition flex items-center gap-1">
+                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy JSON
+                                    </button>
+                                </div>
+                                <pre id="raw-json-output" class="p-4 rounded-xl bg-black/70 border border-white/10 text-emerald-400 font-mono text-xs overflow-x-auto custom-scrollbar max-h-72">
+{
+  "status": "awaiting_input"
+}
+                                </pre>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- TAB 2: MODEL BENCHMARKS & CONFUSION MATRIX                          -->
+        <!-- =================================================================== -->
+        <section id="tab-benchmarks" class="hidden space-y-6">
+            
+            <div class="glass-card p-6 rounded-2xl space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-display font-bold text-white flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="w-5 h-5 text-emerald-400"></i> Model Comparison Matrix
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Evaluation metrics measured across the test dataset (72 test images, 9 per class)</p>
+                    </div>
+                    <button onclick="fetchBenchmarks()" class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-mono text-gray-300 border border-white/10 flex items-center gap-1.5 transition">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh Data
+                    </button>
+                </div>
+
+                <!-- Comparison Table -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="border-b border-white/10 text-gray-400 font-mono uppercase text-[11px]">
+                                <th class="py-3 px-4">Architecture</th>
+                                <th class="py-3 px-4">Test Accuracy</th>
+                                <th class="py-3 px-4">Macro F1 Score</th>
+                                <th class="py-3 px-4">Inference Latency</th>
+                                <th class="py-3 px-4">Model Checkpoint</th>
+                            </tr>
+                        </thead>
+                        <tbody id="benchmark-table-body" class="divide-y divide-white/5">
+                            <!-- Populated dynamically via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Confusion Matrix Viewer -->
+            <div class="glass-card p-6 rounded-2xl space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-xl font-display font-bold text-white flex items-center gap-2">
+                            <i data-lucide="grid" class="w-5 h-5 text-teal-400"></i> Confusion Matrix Explorer
+                        </h2>
+                        <p class="text-xs text-gray-400 mt-0.5">Select a model architecture to inspect classification accuracy across all 8 classes</p>
+                    </div>
+                    <!-- Confusion Matrix Selector Tabs -->
+                    <div class="flex items-center gap-1.5 p-1 bg-black/40 rounded-xl border border-white/10 text-xs">
+                        <button onclick="loadConfusionMatrix('resnet50')" id="cm-btn-resnet50" class="cm-tab px-3 py-1.5 rounded-lg font-medium bg-emerald-600 text-white">ResNet50</button>
+                        <button onclick="loadConfusionMatrix('mobilenet_v2')" id="cm-btn-mobilenet_v2" class="cm-tab px-3 py-1.5 rounded-lg font-medium text-gray-400 hover:text-white">MobileNetV2</button>
+                        <button onclick="loadConfusionMatrix('efficientnet_b0')" id="cm-btn-efficientnet_b0" class="cm-tab px-3 py-1.5 rounded-lg font-medium text-gray-400 hover:text-white">EfficientNet-B0</button>
+                        <button onclick="loadConfusionMatrix('custom_cnn')" id="cm-btn-custom_cnn" class="cm-tab px-3 py-1.5 rounded-lg font-medium text-gray-400 hover:text-white">Custom CNN</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col items-center justify-center p-4 bg-black/40 rounded-2xl border border-white/5">
+                    <img id="confusion-matrix-img" src="/api/reports/confusion-matrix/resnet50" alt="Confusion Matrix" class="max-h-[480px] w-auto object-contain rounded-xl shadow-2xl border border-white/10">
+                    <div class="mt-3 text-xs text-gray-400 font-mono" id="cm-caption">Viewing Confusion Matrix for ResNet50</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- =================================================================== -->
+        <!-- TAB 3: README & PIPELINE STEP-BY-STEP                               -->
+        <!-- =================================================================== -->
+        <section id="tab-pipeline" class="hidden space-y-6">
+            <div class="glass-card p-6 rounded-2xl space-y-5">
+                <div>
+                    <h2 class="text-xl font-display font-bold text-white flex items-center gap-2">
+                        <i data-lucide="layers" class="w-5 h-5 text-emerald-400"></i> End-to-End Pipeline Architecture (README.md)
+                    </h2>
+                    <p class="text-xs text-gray-400 mt-1">
+                        How the Computer Vision + Document AI system processes scanned bank documents step-by-step
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    
+                    <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">1</span>
+                            Step 1 — Synthetic Data Generation
+                        </div>
+                        <p class="text-gray-300">Generates 60 synthetic document images per class (480 total) with realistic bank layouts, headers, and fields.</p>
+                        <code class="block p-2 bg-black/50 rounded font-mono text-[11px] text-emerald-300">python3 data/generate_synthetic_data.py --per_class 60</code>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">2</span>
+                            Step 2 — OpenCV Preprocessing
+                        </div>
+                        <p class="text-gray-300">Performs FastNLMeans denoising, deskewing (rotation correction via minAreaRect), and auto-cropping to document boundary.</p>
+                        <code class="block p-2 bg-black/50 rounded font-mono text-[11px] text-emerald-300">python3 src/data_preprocessing.py</code>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">3</span>
+                            Step 3 — CNN & Transfer Learning Training
+                        </div>
+                        <p class="text-gray-300">Trains 4 neural backbones (Custom CNN, MobileNetV2, ResNet50, EfficientNetB0) with early checkpoint saving.</p>
+                        <code class="block p-2 bg-black/50 rounded font-mono text-[11px] text-emerald-300">python3 -m src.train --model all --epochs 8</code>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">4</span>
+                            Step 4 — Evaluation & Comparison
+                        </div>
+                        <p class="text-gray-300">Generates classification reports, confusion matrices, and model comparison JSON/Markdown benchmarks.</p>
+                        <code class="block p-2 bg-black/50 rounded font-mono text-[11px] text-emerald-300">python3 -m src.evaluate</code>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">5</span>
+                            Step 5 — Grad-CAM Explainability
+                        </div>
+                        <p class="text-gray-300">Generates activation heatmaps using forward/backward hooks on final conv layers for visual inspection.</p>
+                        <code class="block p-2 bg-black/50 rounded font-mono text-[11px] text-emerald-300">python3 -m src.gradcam --image data/raw/cheque/cheque_0000.png --model resnet50</code>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-white/5 border border-white/10 space-y-2">
+                        <div class="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                            <span class="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-xs">6</span>
+                            Step 6 — Phase 2 OCR Extraction
+                        </div>
+                        <p class="text-gray-300">Uses Tesseract OCR on region-of-interest crops to extract Date, Payee, Amount, Account No, and IFSC.</p>
+                        <code class="block p-2 bg-black/50 rounded font-mono text-[11px] text-emerald-300">python3 -m src.ocr_extraction --image data/raw/cheque/cheque_0000.png</code>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto border-t border-white/5 py-4 px-6 text-center text-xs text-gray-500">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>Bank Document Classification & Information Extraction System</span>
+            <span class="font-mono text-[11px]">Powered by PyTorch, OpenCV, Tesseract & FastAPI</span>
+        </div>
+    </footer>
+
+    <!-- Client-Side JavaScript Logic -->
+    <script>
+        // State variables
+        let currentModel = 'resnet50';
+        let currentMode = 'predict';
+        let currentFile = null;
+        let lastResponseData = null;
+
+        const CLASS_NAMES = [
+            "cheque",
+            "bank_statement",
+            "card_document",
+            "deposit_slip",
+            "withdrawal_slip",
+            "account_opening_form",
+            "kyc_document",
+            "other_financial_document"
+        ];
+
+        const CLASS_ICONS = {
+            "cheque": "🏦",
+            "bank_statement": "📄",
+            "card_document": "💳",
+            "deposit_slip": "📥",
+            "withdrawal_slip": "📤",
+            "account_opening_form": "📝",
+            "kyc_document": "🆔",
+            "other_financial_document": "📊"
+        };
+
+        // Initialize Lucide Icons
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            fetchHealth();
+            fetchBenchmarks();
+            // Pre-select sample cheque for immediate wow factor
+            loadSampleDoc('cheque', 'cheque_0000.png');
+        });
+
+        // Tab Switching
+        function switchTab(tabId) {
+            ['classifier', 'benchmarks', 'pipeline'].forEach(t => {
+                const section = document.getElementById(`tab-${t}`);
+                const btn = document.getElementById(`tab-btn-${t}`);
+                if (t === tabId) {
+                    section.classList.remove('hidden');
+                    btn.className = 'nav-tab px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition bg-emerald-600 text-white shadow';
+                } else {
+                    section.classList.add('hidden');
+                    btn.className = 'nav-tab px-4 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-2 transition text-gray-400 hover:text-white hover:bg-white/5';
+                }
+            });
+            lucide.createIcons();
+        }
+
+        // Subtab in Results Card
+        function setResultsSubTab(subTabId) {
+            ['probs', 'gradcam', 'ocr', 'json'].forEach(st => {
+                const view = document.getElementById(`subtab-view-${st}`);
+                const btn = document.getElementById(`subtab-btn-${st}`);
+                if (st === subTabId) {
+                    view.classList.remove('hidden');
+                    btn.className = 'subtab-btn text-emerald-400 border-b-2 border-emerald-400 pb-1 flex items-center gap-1.5';
+                } else {
+                    view.classList.add('hidden');
+                    btn.className = 'subtab-btn text-gray-400 hover:text-white pb-1 flex items-center gap-1.5';
+                }
+            });
+            lucide.createIcons();
+        }
+
+        // Model Selection
+        function selectModel(modelName) {
+            currentModel = modelName;
+            document.querySelectorAll('#model-selector-grid .model-card').forEach(btn => {
+                if (btn.getAttribute('data-model') === modelName) {
+                    btn.className = 'model-card p-3 rounded-xl border border-emerald-500 bg-emerald-950/30 text-left transition relative';
+                } else {
+                    btn.className = 'model-card p-3 rounded-xl border border-white/10 bg-white/5 text-left transition hover:border-white/20';
+                }
+            });
+            document.getElementById('active-model-badge').textContent = `${modelName.replace('_', ' ').toUpperCase()}`;
+        }
+
+        // Action Mode Selection (predict, gradcam, ocr)
+        function setInteractionMode(mode) {
+            currentMode = mode;
+            ['predict', 'gradcam', 'ocr'].forEach(m => {
+                const btn = document.getElementById(`mode-btn-${m}`);
+                if (m === mode) {
+                    btn.className = 'mode-tab py-2 rounded-lg font-medium transition bg-emerald-600 text-white flex flex-col items-center gap-1';
+                } else {
+                    btn.className = 'mode-tab py-2 rounded-lg font-medium transition text-gray-400 hover:text-white flex flex-col items-center gap-1';
+                }
+            });
+            
+            const btnText = document.getElementById('btn-text');
+            if (mode === 'predict') btnText.textContent = 'Run Document Classification';
+            else if (mode === 'gradcam') btnText.textContent = 'Generate Grad-CAM Explainability';
+            else if (mode === 'ocr') btnText.textContent = 'Classify & Extract OCR Fields';
+        }
+
+        // File Selection Handling
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            setFile(file);
+        }
+
+        function setFile(file) {
+            currentFile = file;
+            document.getElementById('file-size-badge').textContent = `${(file.size / 1024).toFixed(1)} KB`;
+            document.getElementById('upload-prompt').classList.add('hidden');
+            document.getElementById('preview-container').classList.remove('hidden');
+            document.getElementById('preview-filename').textContent = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const previewImg = document.getElementById('image-preview');
+                previewImg.src = e.target.result;
+                document.getElementById('gradcam-orig-img').src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Drag and Drop
+        const dropZone = document.getElementById('drop-zone');
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-emerald-500', 'bg-emerald-500/10');
+            }, false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-emerald-500', 'bg-emerald-500/10');
+            }, false);
+        });
+        dropZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length) setFile(files[0]);
+        });
+
+        // Load Sample Document
+        async function loadSampleDoc(className, filename) {
+            try {
+                const res = await fetch(`/api/samples/${className}/${filename}`);
+                if (!res.ok) throw new Error('Sample not found');
+                const blob = await res.blob();
+                const file = new File([blob], `${className}_sample.png`, { type: 'image/png' });
+                setFile(file);
+                
+                // If it's a cheque, automatically set mode to ocr or predict
+                if (className === 'cheque') {
+                    setInteractionMode(currentMode);
+                }
+            } catch (err) {
+                console.error("Error loading sample:", err);
+            }
+        }
+
+        // Execute API Inference
+        async function executeInference() {
+            if (!currentFile) {
+                alert("Please select or upload a document first!");
+                return;
+            }
+
+            const btn = document.getElementById('run-inference-btn');
+            const btnText = document.getElementById('btn-text');
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="inline-block animate-spin mr-2">⏳</span> Analyzing Document...';
+
+            const formData = new FormData();
+            formData.append('file', currentFile);
+
+            let endpoint = '/predict';
+            if (currentMode === 'gradcam') endpoint = '/predict/gradcam';
+            else if (currentMode === 'ocr') endpoint = '/predict/ocr';
+
+            try {
+                const response = await fetch(`${endpoint}?model=${currentModel}`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json();
+                    throw new Error(errData.detail || 'Inference failed');
+                }
+
+                const data = await response.json();
+                lastResponseData = data;
+                renderResults(data);
+
+                // Auto-switch subtab based on mode
+                if (currentMode === 'gradcam') setResultsSubTab('gradcam');
+                else if (currentMode === 'ocr') setResultsSubTab('ocr');
+                else setResultsSubTab('probs');
+
+            } catch (err) {
+                alert(`Inference Error: ${err.message}`);
+            } finally {
+                btn.disabled = false;
+                setInteractionMode(currentMode);
+            }
+        }
+
+        // Render Results in UI
+        function renderResults(data) {
+            const rawLabel = data.document_type || 'Unknown';
+            const cleanLabel = rawLabel.replace(/_/g, ' ');
+            const conf = Math.round((data.confidence || 0) * 1000) / 10;
+            const icon = CLASS_ICONS[rawLabel] || '📄';
+
+            document.getElementById('result-label').innerHTML = `<span class="mr-2">${icon}</span> ${cleanLabel}`;
+            document.getElementById('result-confidence').textContent = `${conf}%`;
+            
+            if (data.inference_time_ms) {
+                document.getElementById('inference-time').textContent = `Latency: ${data.inference_time_ms} ms (${data.model_used})`;
+            }
+
+            // Confidence Badge styling
+            const badge = document.getElementById('result-badge');
+            if (conf >= 90) {
+                badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 badge-glow';
+                badge.textContent = 'High Confidence';
+            } else if (conf >= 70) {
+                badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40';
+                badge.textContent = 'Moderate Confidence';
+            } else {
+                badge.className = 'px-2.5 py-0.5 rounded-full text-xs font-mono font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/40';
+                badge.textContent = 'Low Confidence';
+            }
+
+            // Render Probabilities List
+            if (data.probabilities) {
+                const container = document.getElementById('probabilities-container');
+                container.innerHTML = '';
+
+                // Sort classes by probability descending
+                const sortedEntries = Object.entries(data.probabilities).sort((a, b) => b[1] - a[1]);
+
+                sortedEntries.forEach(([cls, prob]) => {
+                    const percent = Math.round(prob * 1000) / 10;
+                    const isTop = cls === rawLabel;
+                    const cIcon = CLASS_ICONS[cls] || '📄';
+                    const cName = cls.replace(/_/g, ' ');
+
+                    const row = document.createElement('div');
+                    row.className = `p-2.5 rounded-xl border transition ${
+                        isTop 
+                        ? 'bg-emerald-950/40 border-emerald-500/40 text-white font-semibold' 
+                        : 'bg-white/[0.02] border-white/5 text-gray-400'
+                    }`;
+
+                    row.innerHTML = `
+                        <div class="flex items-center justify-between text-xs mb-1">
+                            <span class="flex items-center gap-1.5">
+                                <span>${cIcon}</span>
+                                <span class="capitalize">${cName}</span>
+                            </span>
+                            <span class="font-mono text-[11px] ${isTop ? 'text-emerald-400 font-bold' : 'text-gray-400'}">${percent}%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full ${isTop ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : 'bg-white/20'}" style="width: ${percent}%"></div>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+            }
+
+            // Render Grad-CAM
+            if (data.gradcam_image_url) {
+                document.getElementById('gradcam-heat-img').src = data.gradcam_image_url;
+            }
+
+            // Render OCR Fields
+            if (data.extracted_fields) {
+                const f = data.extracted_fields;
+                document.getElementById('ocr-val-date').textContent = f.date || 'N/A';
+                document.getElementById('ocr-val-payee').textContent = f.payee || 'N/A';
+                document.getElementById('ocr-val-amount').textContent = f.amount_clean || f.amount || 'N/A';
+                document.getElementById('ocr-val-account').textContent = f.account_number_clean || f.account_number || 'N/A';
+                document.getElementById('ocr-val-ifsc').textContent = f.ifsc_clean || f.ifsc || 'N/A';
+                document.getElementById('ocr-val-sig').textContent = f.signature ? 'Detected' : 'Verified';
+            }
+
+            // Raw JSON
+            document.getElementById('raw-json-output').textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Fetch Backend Health & Models
+        async function fetchHealth() {
+            try {
+                const res = await fetch('/health');
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('api-status-text').textContent = `Device: ${data.device.toUpperCase()}`;
+                }
+            } catch (err) {
+                document.getElementById('api-status-text').textContent = 'Connecting...';
+            }
+        }
+
+        // Fetch Benchmark Comparison
+        async function fetchBenchmarks() {
+            try {
+                const res = await fetch('/api/reports/comparison');
+                if (!res.ok) return;
+                const data = await res.json();
+                const tbody = document.getElementById('benchmark-table-body');
+                tbody.innerHTML = '';
+
+                data.forEach(item => {
+                    const tr = document.createElement('tr');
+                    const isTop = item.accuracy === 1.0;
+                    tr.className = 'hover:bg-white/5 transition';
+                    tr.innerHTML = `
+                        <td class="py-3 px-4 font-semibold text-white flex items-center gap-2">
+                            ${isTop ? '<span class="text-emerald-400 font-mono text-[11px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/30">TOP</span>' : ''}
+                            ${item.model}
+                        </td>
+                        <td class="py-3 px-4 font-mono ${isTop ? 'text-emerald-400 font-bold' : 'text-gray-300'}">
+                            ${(item.accuracy * 100).toFixed(1)}%
+                        </td>
+                        <td class="py-3 px-4 font-mono text-gray-300">
+                            ${(item.f1_macro * 100).toFixed(1)}%
+                        </td>
+                        <td class="py-3 px-4 font-mono text-teal-300">
+                            ${item.avg_inference_ms.toFixed(1)} ms
+                        </td>
+                        <td class="py-3 px-4 text-emerald-400 font-mono text-xs">
+                            outputs/models/${item.model}.pt
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Error fetching benchmarks:", err);
+            }
+        }
+
+        // Confusion Matrix Viewer
+        function loadConfusionMatrix(modelName) {
+            document.querySelectorAll('.cm-tab').forEach(b => {
+                b.className = 'cm-tab px-3 py-1.5 rounded-lg font-medium text-gray-400 hover:text-white';
+            });
+            document.getElementById(`cm-btn-${modelName}`).className = 'cm-tab px-3 py-1.5 rounded-lg font-medium bg-emerald-600 text-white';
+            document.getElementById('confusion-matrix-img').src = `/api/reports/confusion-matrix/${modelName}?t=${Date.now()}`;
+            document.getElementById('cm-caption').textContent = `Viewing Confusion Matrix for ${modelName}`;
+        }
+
+        // Copy JSON Utility
+        function copyRawJson() {
+            if (!lastResponseData) return;
+            navigator.clipboard.writeText(JSON.stringify(lastResponseData, null, 2));
+            alert("JSON copied to clipboard!");
+        }
+    </script>
+</body>
+</html>

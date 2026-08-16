@@ -13,6 +13,25 @@
 
 set -e
 
+# ── Auto-detect venv Python on Windows ──────────────────────────────
+# When 'bash' is called from PowerShell, it does NOT inherit the venv.
+# We look for the venv Python relative to this script's directory.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+if [ -f "$SCRIPT_DIR/venv/Scripts/python.exe" ]; then
+  PYTHON="$SCRIPT_DIR/venv/Scripts/python.exe"
+elif [ -f "$SCRIPT_DIR/.venv/Scripts/python.exe" ]; then
+  PYTHON="$SCRIPT_DIR/.venv/Scripts/python.exe"
+elif [ -f "$SCRIPT_DIR/venv/bin/python" ]; then
+  PYTHON="$SCRIPT_DIR/venv/bin/python"
+elif [ -f "$SCRIPT_DIR/.venv/bin/python" ]; then
+  PYTHON="$SCRIPT_DIR/.venv/bin/python"
+else
+  PYTHON="python"
+fi
+
+echo "Using Python: $PYTHON"
+
 EPOCHS=8
 PER_CLASS=60
 EXTRA_TRAIN_ARGS=""
@@ -31,34 +50,29 @@ done
 export FORCE_CPU="$FORCE_CPU_FLAG"
 
 echo "==> Step 0/4: Checking dependencies"
-if ! python3 -c "import cv2, torch, torchvision, fastapi" 2>/dev/null; then
+if ! "$PYTHON" -c "import cv2, torch, torchvision, fastapi" 2>/dev/null; then
   echo ""
-  echo "ERROR: Required Python packages are missing for the python3 that 'bash' is using."
-  echo "This usually happens on Windows when 'bash' launches WSL/Git-Bash Python, which is"
-  echo "DIFFERENT from your activated .venv in PowerShell."
-  echo ""
-  echo "Fix: install the requirements using the SAME python3 this script will use:"
-  echo "    python3 -m pip install -r requirements.txt --break-system-packages"
-  echo ""
-  echo "(Run that inside the same WSL/Git-Bash shell you're using to run this script.)"
+  echo "ERROR: Required Python packages are missing."
+  echo "Fix: install the requirements into your venv:"
+  echo "    python -m pip install -r requirements.txt"
   exit 1
 fi
 
 echo "==> Step 1/4: Generating synthetic data (skip if data/raw/ already populated)"
 if [ -z "$(ls -A data/raw 2>/dev/null)" ]; then
-  python3 data/generate_synthetic_data.py --per_class "$PER_CLASS"
+  "$PYTHON" data/generate_synthetic_data.py --per_class "$PER_CLASS"
 else
   echo "data/raw already has files -- skipping synthetic generation."
 fi
 
 echo "==> Step 2/4: Preprocessing (denoise / deskew / crop)"
-python3 src/data_preprocessing.py
+"$PYTHON" src/data_preprocessing.py
 
 echo "==> Step 3/4: Training all models ($EPOCHS epochs each)"
-python3 -m src.train --model all --epochs "$EPOCHS" $EXTRA_TRAIN_ARGS
+"$PYTHON" -m src.train --model all --epochs "$EPOCHS" $EXTRA_TRAIN_ARGS
 
 echo "==> Step 4/4: Evaluating and comparing all models"
-python3 -m src.evaluate
+"$PYTHON" -m src.evaluate
 
 echo ""
 echo "Pipeline complete."
