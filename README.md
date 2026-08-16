@@ -1,4 +1,4 @@
-# 🏦 AI-Powered Bank Document Classification & Information Extraction using CNN and OCR
+#  AI-Powered Bank Document Classification & Information Extraction using CNN and OCR
 
 ---
 
@@ -228,3 +228,7 @@ docker compose up --build
 ```
 The API will be available at http://localhost:8000. The `docker-compose.yml` mounts your local `outputs/` and `data/` folders into the container, so you don't need to retrain inside Docker — just train locally first, then launch the container to serve it.
 
+run from frontend:
+```bash
+frontend/ python streamlit_app.py
+```
