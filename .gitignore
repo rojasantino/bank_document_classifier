@@ -12,6 +12,8 @@ ENV/
 READMEcopy.md
 .agents/skills
 .claude/skills
+.agents/
+.claude/
 # Data (keep folder structure, ignore contents)
 data/raw/*
 data/processed/*
